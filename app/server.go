@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	// Uncomment this block to pass the first stage
@@ -19,16 +20,26 @@ func main() {
 		os.Exit(1)
 	}
 	defer l.Close()
+
 	conn, err := l.Accept()
 	if err != nil {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
-	var res []byte
-	_, err = conn.Read(res)
-	if err != nil {
-		fmt.Println("Error reading from connection: ", err.Error())
-		os.Exit(1)
+	defer conn.Close()
+	buf := make([]byte, 1024)
+	for {
+		n, err := conn.Read(buf)
+		if n == 0 {
+			break
+		}
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println("Error reading from connection: ", err.Error())
+				os.Exit(1)
+			}
+		}
+		conn.Write([]byte("+PONG\r\n"))
 	}
-	conn.Write([]byte("+PONG\r\n"))
+	conn.Close()
 }
